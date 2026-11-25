@@ -1,4 +1,4 @@
-"""Cola de trabajos largos (analizar, separar lecturas) para la app web.
+"""Cola de trabajos largos (analizar, separar lecturas, estructura del sermón) para la app web.
 
 Corren de uno en uno en un hilo aparte: el análisis usa mucho CPU y dos a la vez solo
 tardarían más. La página consulta el estado cada segundo.
@@ -32,7 +32,7 @@ class ProgresoWeb(Progreso):
 @dataclass
 class Trabajo:
     id: int
-    tipo: str                       # "analizar" | "lecturas"
+    tipo: str                       # "analizar" | "lecturas" | "estructura"
     titulo: str
     funcion: Callable[[ProgresoWeb], str | None]   # devuelve el id del análisis
     estado: str = "en_cola"         # en_cola | corriendo | listo | error | cancelado

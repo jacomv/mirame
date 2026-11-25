@@ -1,7 +1,7 @@
 [project]
 name = "mirame"
 version = "0.5.1"
-description = "Mide hacia dónde mira el predicador en un sermón: a la congregación o a sus notas."
+description = "Analiza el video de un sermón: hacia dónde mira el predicador y, con IA, la estructura y el contenido de lo que predicó."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

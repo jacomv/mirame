@@ -45,6 +45,10 @@
   </section>
 
   <aside class="lado">
+    <div class="pestanas" id="pestanas" hidden>
+      <button data-pestana="mirada" class="activa">Mirada</button>
+      <button data-pestana="sermon" title="Tecla S">Sermón</button>
+    </div>
     <div class="panel veredicto">
       <div class="etq">Resultado</div>
       <div class="cifra num" id="cifra"></div>
@@ -63,11 +67,17 @@
       <div class="etq">Detalle</div>
       <div class="datos" id="datos"></div>
     </div>
+
+    <div class="panel sermon" id="sermon">
+      <nav class="sermon-nav" id="sermon-nav"></nav>
+      <div class="sermon-cuerpo" id="sermon-cuerpo"></div>
+    </div>
   </aside>
 </main>
 
 <section class="panel recorrido">
   <div class="etq">Recorrido del sermón <small id="cinta-nota"></small></div>
+  <div class="capitulos" id="capitulos" hidden></div>
   <div class="pista" id="g-cinta">
     <canvas class="cinta" id="c-cinta"></canvas>
     <div class="cursor" id="cur-cinta"></div>

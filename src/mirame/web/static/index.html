@@ -46,7 +46,8 @@
 
     <div class="sugerencia" id="sugerencia-claves" hidden>
       <b>Funciona sin claves de IA.</b> Si agregas una clave de transcripción (Whisper), el resultado es más fino:
-      separa la lectura bíblica de la lectura de notas y deja fuera las oraciones. Te sugerimos
+      separa la lectura bíblica de la lectura de notas, deja fuera las oraciones y puede analizar la estructura
+      del sermón. Te sugerimos
       <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq</a>, que es gratis; también sirve
       OpenAI u otro servicio compatible. <a href="#/ajustes">Agregar en Ajustes →</a>
     </div>
@@ -113,6 +114,11 @@
           <span><b>Separar la lectura bíblica y la oración</b>
             <small id="lecturas-nota">Usa IA para transcribir el sermón. Leer la Biblia no cuenta como leer notas, y orar con los ojos cerrados no cuenta como mirar abajo.</small></span>
         </label>
+        <label class="interruptor" id="op-estructura">
+          <input type="checkbox" name="estructura">
+          <span><b>Analizar la estructura del sermón</b>
+            <small id="estructura-nota">Usa IA sobre la transcripción: las partes y sus transiciones, el argumento y el clímax, cómo conecta con el evangelio, las aplicaciones y los pasajes citados, cada cosa con su minuto.</small></span>
+        </label>
         <details class="avanzado">
           <summary>Opciones avanzadas</summary>
           <div class="fila-3">
@@ -136,7 +142,7 @@
       <ol>
         <li>Ubica el rostro del predicador en cada fotograma y mide la inclinación de la cabeza y hacia dónde apuntan los ojos.</li>
         <li>Aprende su postura habitual al mirar a la gente y marca como «abajo» lo que se aparta de ella.</li>
-        <li>Si activas la IA, transcribe el audio y separa la lectura bíblica y la oración.</li>
+        <li>Si activas la IA, transcribe el audio, separa la lectura bíblica y la oración, y resume la estructura del sermón.</li>
         <li>Entrega un reporte con el video, los porcentajes, la mirada más larga y la línea de tiempo.</li>
       </ol>
       <p class="nota">Todo corre en tu computadora. El video solo sale de ella si activas la IA, y en ese caso solo el audio.</p>
@@ -162,7 +168,9 @@
     <div class="explica">
       <b>Mírame funciona sin claves de IA</b> y mide la mirada igual. Las claves agregan un paso opcional que hace
       el resultado más fino: transcribir el sermón para separar la <span class="c-biblia">lectura bíblica</span>
-      de la lectura de notas y dejar fuera las oraciones (con los ojos cerrados parecería que mira abajo).
+      de la lectura de notas y dejar fuera las oraciones (con los ojos cerrados parecería que mira abajo). Sobre esa
+      transcripción también se puede analizar la estructura del sermón: partes y transiciones, argumento y clímax,
+      evangelio, aplicaciones y pasajes citados.
     </div>
 
     <form id="f-ajustes" class="tarjeta" autocomplete="off">
@@ -201,9 +209,10 @@
       </div>
 
       <h2>2. Análisis de la transcripción</h2>
-      <p class="nota">Un modelo de lenguaje marca qué frases son lectura bíblica (en cualquier versión) y cuáles son oración.</p>
+      <p class="nota">Un modelo de lenguaje marca qué frases son lectura bíblica (en cualquier versión) y cuáles son oración,
+        y analiza la estructura del sermón.</p>
       <label class="interruptor chico"><input type="radio" name="proveedor" value="groq" checked>
-        <span>Groq <small>(openai/gpt-oss-120b, con la clave de Groq)</small></span></label>
+        <span>Groq u OpenAI <small>(OpenAI si pusiste su clave abajo; si no, openai/gpt-oss-120b con la clave de Groq)</small></span></label>
       <label class="interruptor chico"><input type="radio" name="proveedor" value="otro">
         <span>Otro proveedor compatible con OpenAI <small>(OpenAI, OpenRouter, Azure, DeepSeek, LiteLLM, Ollama…)</small></span></label>
 
@@ -221,8 +230,31 @@
         <label class="campo"><span>Modelo</span>
           <input name="llm_modelo" list="modelos" placeholder="deepseek-chat" spellcheck="false"></label>
         <datalist id="modelos"></datalist>
-        <p class="nota">Conviene un modelo rápido y sin razonamiento: la tarea es marcar frases, no pensar.</p>
+        <p class="nota">Para marcar las lecturas conviene un modelo rápido y sin razonamiento: la tarea es marcar frases, no pensar.
+          Para la estructura conviene uno capaz, que lea el sermón completo de una vez.</p>
       </div>
+
+      <h2>OpenAI (opcional)</h2>
+      <p class="nota">Con una clave de <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a>
+        el paso 2 usa los modelos de OpenAI y, si no hay otra forma de transcribir, el paso 1 usa <code>whisper-1</code>.
+        Es de pago: como ejemplo, un sermón de 35 minutos costó cerca de un dólar. La pestaña «Sermón» sale mejor con sus modelos.</p>
+      <label class="campo"><span>Clave de OpenAI</span>
+        <div class="con-boton">
+          <input name="openai_clave" type="password" placeholder="sk-…" spellcheck="false">
+          <button type="button" class="secundario chico" data-ver="openai_clave">Ver</button>
+          <button type="button" class="secundario chico" data-probar="openai">Probar</button>
+        </div>
+      </label>
+      <div class="resultado-prueba" id="prueba-openai"></div>
+
+      <h2>Qué API usar</h2>
+      <label class="interruptor chico"><input type="radio" name="api" value="" checked>
+        <span>Automático <small>(lo elegido en los pasos 1 y 2)</small></span></label>
+      <label class="interruptor chico"><input type="radio" name="api" value="openai">
+        <span>Solo OpenAI <small>(transcribe y analiza, aunque haya otras claves o servicios)</small></span></label>
+      <label class="interruptor chico"><input type="radio" name="api" value="groq">
+        <span>Solo Groq <small>(transcribe y analiza, aunque haya otras claves o servicios)</small></span></label>
+      <p class="nota" id="en-uso"></p>
 
       <div class="estado-claves" id="estado-claves"></div>
       <div class="error" id="error-ajustes" hidden></div>

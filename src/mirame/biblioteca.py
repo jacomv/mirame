@@ -67,6 +67,7 @@ def ficha(carpeta: Path) -> dict:
         "pct_biblia": b.get("pct_abajo_leyendo_biblia"),
         "mirada_media": c.get("duracion_media"),
         "con_lecturas": bool(resumen.get("biblia")) or (carpeta / "lecturas.json").exists(),
+        "con_estructura": (carpeta / "estructura.json").exists(),
         "tiene_reporte": (carpeta / "reporte.html").exists(),
         "megabytes": round(tam / 1e6, 1),
     }

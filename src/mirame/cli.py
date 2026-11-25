@@ -55,6 +55,7 @@ def cmd_analizar(a):
         excluir=[_rango(x) for x in a.excluir], ancho_minimo=a.ancho_minimo,
         umbral_ojos=None if a.solo_cabeza else a.umbral_ojos,
         separar_lecturas=False if a.sin_lecturas else None,
+        estructura=False if a.sin_estructura else None,
         salida=Path(a.salida) if a.salida else None,
     )
     t0 = time.time()
@@ -91,6 +92,28 @@ def cmd_lecturas(a):
             print(f"  {formato_tiempo(t['inicio'])}–{formato_tiempo(t['fin'])}  {t['texto'][:70]}…")
     print()
     print(analisis.texto_resumen(resumen))
+
+
+# ---------------------------------------------------------------- estructura
+def cmd_estructura(a):
+    """Transcribe el audio (si hace falta) y analiza la estructura y el contenido del sermón."""
+    from . import estructura, lecturas, proceso
+
+    carpeta = _carpeta(a.carpeta)
+    if a.mostrar:
+        datos = estructura.leer(carpeta)
+        if datos is None:
+            sys.exit("Ese análisis todavía no tiene estructura. Córrelo sin --mostrar.")
+    else:
+        try:
+            datos = proceso.analizar_estructura(carpeta, retranscribir=a.retranscribir)
+        except lecturas.FaltaLlave as e:
+            sys.exit(f"{e}\nConfigúrala con `mirame app` (Ajustes) o con variables de entorno (ver README).")
+        except (FileNotFoundError, RuntimeError) as e:
+            sys.exit(str(e))
+        print()
+    print(estructura.texto(datos, estructura._titulo(carpeta)))
+    print(f"\nGuardado en {carpeta / 'estructura.md'} · se ve en la pestaña «Sermón» del reporte.")
 
 
 # ---------------------------------------------------------------- recalcular
@@ -279,6 +302,8 @@ def construir() -> argparse.ArgumentParser:
     p.add_argument("--solo-cabeza", action="store_true", help="ignorar los ojos")
     p.add_argument("--sin-lecturas", action="store_true",
                    help="no separar lectura bíblica ni oración aunque haya claves de IA")
+    p.add_argument("--sin-estructura", action="store_true",
+                   help="no analizar la estructura del sermón aunque haya claves de IA")
     p.add_argument("--salida", help="carpeta de salida (por defecto, una nueva en la biblioteca)")
     p.set_defaults(fn=cmd_analizar)
 
@@ -288,6 +313,13 @@ def construir() -> argparse.ArgumentParser:
     p.add_argument("--solo-recalcular", action="store_true",
                    help="no consultar a la IA: aplicar lecturas.json tal como está (p. ej. editado a mano)")
     p.set_defaults(fn=cmd_lecturas)
+
+    p = sub.add_parser("estructura", help="estructura, argumento, evangelio, aplicaciones y pasajes del sermón "
+                                          "(requiere clave de IA)")
+    p.add_argument("carpeta", help="id del análisis o ruta de su carpeta")
+    p.add_argument("--retranscribir", action="store_true", help="volver a transcribir aunque exista")
+    p.add_argument("--mostrar", action="store_true", help="solo mostrar el análisis ya guardado, sin consultar a la IA")
+    p.set_defaults(fn=cmd_estructura)
 
     p = sub.add_parser("recalcular", help="reclasificar con otros parámetros, sin volver a procesar el video")
     p.add_argument("carpeta")

@@ -86,6 +86,7 @@ src/mirame/
 ├── pose.py         rostro, pose de la cabeza y ojos con MediaPipe
 ├── analisis.py     calibrar, clasificar, episodios, miradas, margen de error y resumen
 ├── lecturas.py     transcripción y marcas de lectura bíblica y oración
+├── estructura.py   estructura y contenido del sermón sobre la transcripción
 ├── reporte.py      arma el reporte HTML autocontenido
 ├── capturar.py     capturas PNG con Playwright
 ├── muestras.py     fotogramas de muestra para revisar a ojo

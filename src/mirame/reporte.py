@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from . import estructura
 from .analisis import leer_fotogramas, leer_resumen
 
 CLASES = ["congregacion", "abajo", "sin_dato", "excluido"]
@@ -30,6 +31,18 @@ def _lecturas(carpeta: Path) -> list:
     return [[t["inicio"], t["fin"], t.get("referencia") or ""] for t in json.loads(ruta.read_text())["lecturas"]]
 
 
+def _estructura(carpeta: Path, titulo: str) -> tuple[dict | None, str | None]:
+    """La estructura del sermón y su versión en texto (para el botón Copiar). Si el
+    archivo se editó a mano y quedó incompleto, el reporte se genera sin ella."""
+    datos = estructura.leer(carpeta)
+    if datos is None:
+        return None, None
+    try:
+        return datos, estructura.texto(datos, titulo)
+    except (KeyError, TypeError):
+        return None, None
+
+
 def generar(carpeta: Path) -> Path:
     carpeta = carpeta.resolve()
     resumen = leer_resumen(carpeta)
@@ -37,8 +50,10 @@ def generar(carpeta: Path) -> Path:
     seg = pd.read_csv(carpeta / "segundos.csv")
     idx = {c: i for i, c in enumerate(CLASES)}
 
+    titulo_video = resumen["video"].get("titulo") or carpeta.name
+    sermon, sermon_texto = _estructura(carpeta, titulo_video)
     datos = {
-        "titulo": resumen["video"].get("titulo") or carpeta.name,
+        "titulo": titulo_video,
         "carpeta": str(carpeta),
         "duracion": resumen["video"]["duracion_analizada"],
         "ancho": resumen["video"].get("ancho", 1280),
@@ -46,6 +61,8 @@ def generar(carpeta: Path) -> Path:
         "resumen": resumen,
         "segundos": [[int(r.t), idx[r.clase], _n(r.pitch, 1)] for r in seg.itertuples()],
         "lecturas": _lecturas(carpeta),
+        "estructura": sermon,
+        "estructura_texto": sermon_texto,
         "fotogramas": [
             [idx[r.clase], _n(r.pitch, 1)] + ([_n(r.x, 4), _n(r.y, 4), _n(r.w, 4), _n(r.h, 4),
                                                _n(getattr(r, "ojos", None), 2)] if r.rostro else [])

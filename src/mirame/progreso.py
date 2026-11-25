@@ -17,6 +17,7 @@ PESOS = {
     "Midiendo la mirada": 65,
     "Transcribiendo el audio": 10,
     "Marcando lectura bíblica y oración": 5,
+    "Analizando la estructura del sermón": 15,
 }
 
 

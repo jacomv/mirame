@@ -18,6 +18,7 @@ from .video import formato_tiempo
 
 CONGREGACION, ABAJO, SIN_DATO, EXCLUIDO = "congregacion", "abajo", "sin_dato", "excluido"
 LIMITE_SIN_DATO = 30.0  # % de segundos sin rostro a partir del cual el resultado es poco confiable
+LIMITE_ORACION = 15.0   # % del sermón marcado como oración a partir del cual se avisa
 METODO = 3              # 1: cabeza · 2: + ojos · 3: + calibración con ojos arriba, filtro de parpadeo
 BLOQUE_BOOTSTRAP = 30   # s: los segundos vecinos no son independientes; se remuestrea por bloques
 
@@ -357,6 +358,14 @@ def guardar(carpeta: Path, df: pd.DataFrame, p: Parametros, video: dict) -> dict
         resumen["oracion"] = {"tramos": len(oraciones),
                               "segundos": round(sum(b - a for a, b in oraciones), 1),
                               "minutos": [formato_tiempo(a) for a, _ in oraciones]}
+        # Las oraciones quedan fuera de la medición: si son demasiadas, lo más probable es
+        # que el modelo haya tomado predicación por oración.
+        duracion = float(video.get("duracion_analizada") or 0)
+        if duracion and resumen["oracion"]["segundos"] > LIMITE_ORACION / 100 * duracion:
+            resumen["advertencias"].append(
+                f"{formato_tiempo(resumen['oracion']['segundos'])} del sermón quedaron fuera de la medición por estar "
+                f"marcados como oración (en {', '.join(resumen['oracion']['minutos'])}). Es más del {LIMITE_ORACION:.0f} %: "
+                "revisa que de verdad lo sean; si no, corrige lecturas.json y aplica `mirame lecturas --solo-recalcular`.")
 
     salida = df[[c for c in COLUMNAS if c in df.columns]].copy()
     salida["rostro"] = np.where(df.rostro, "si", "no")

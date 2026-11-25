@@ -115,6 +115,81 @@ button.discreto:hover { color: var(--texto); border-color: var(--linea); }
 .episodios button.biblia { background: var(--biblia-claro); color: #1e3a8a; }
 .episodios button.verde { background: var(--congregacion-claro); color: #14532d; }
 
+/* ---------- Pestañas Mirada / Sermón ---------- */
+.pestanas { display: flex; gap: 3px; background: #e9e6e0; border-radius: 10px; padding: 3px; align-self: flex-start; flex: none; }
+.pestanas button { border: 0; background: transparent; padding: 5px 18px; border-radius: 8px; font-size: 13px; color: var(--suave); }
+.pestanas button:hover { color: var(--texto); }
+.pestanas button.activa { background: var(--panel); color: var(--texto); box-shadow: 0 1px 2px rgba(0, 0, 0, .14); }
+body.captura .pestanas { display: none; }
+body.resumen .pestanas { grid-column: 1 / -1; justify-self: start; }
+
+/* ---------- Sermón: estructura y contenido ---------- */
+.sermon { display: none; padding: 0; overflow: hidden; }
+body.ver-sermon .lado > .panel:not(.sermon) { display: none; }
+body.ver-sermon .sermon { display: flex; flex-direction: column; }
+.sermon-nav { display: flex; gap: 2px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--linea); flex: none; overflow-x: auto; }
+.sermon-nav button { border: 0; background: transparent; font-size: 13px; font-weight: 600; color: var(--suave); padding: 5px 8px; border-radius: 7px; white-space: nowrap; }
+.sermon-nav button:hover { background: var(--fondo); color: var(--texto); }
+.sermon-nav .espacio { flex: 1; }
+.sermon-cuerpo { overflow-y: auto; padding: 4px 18px 14px; font-size: 14px; line-height: 1.45; max-height: 78vh; scroll-behavior: smooth; }
+.sermon-cuerpo section { padding: 12px 0 14px; border-bottom: 1px solid var(--linea); }
+.sermon-cuerpo section:last-of-type { border-bottom: 0; }
+.sermon-cuerpo h3 { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tenue); margin: 0 0 10px; }
+.sermon-cuerpo h3 small { font-size: 12px; font-weight: 600; letter-spacing: 0; background: var(--fondo); color: var(--suave); padding: 1px 7px; border-radius: 999px; margin-left: 4px; }
+.sermon-cuerpo h4 { font-size: 13px; font-weight: 700; margin: 16px 0 6px; }
+.sermon-cuerpo p { margin: 0 0 8px; }
+.sermon-cuerpo .tema { font-size: 17px; font-weight: 700; line-height: 1.3; letter-spacing: -0.005em; margin-bottom: 4px; }
+.sermon-cuerpo .pasaje-principal { color: var(--biblia-oscuro); font-weight: 600; }
+.sermon-cuerpo .meta { font-size: 12.5px; color: var(--tenue); margin: 2px 0 0; }
+.sermon-cuerpo .vacio { color: var(--suave); }
+.sermon-cuerpo .pie-sermon { padding-top: 10px; }
+.sermon-cuerpo blockquote { margin: 4px 0 0; padding-left: 10px; border-left: 2px solid var(--linea); color: var(--suave); font-size: 13.5px; }
+.sermon-cuerpo ol, .sermon-cuerpo ul { list-style: none; margin: 0; padding: 0; }
+
+.ir { font-size: 12.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; border-color: transparent; background: #efede8; color: var(--texto);
+      white-space: nowrap; justify-self: start; align-self: start; }
+.ir:hover { background: var(--texto); color: #fff; border-color: transparent; }
+.chip { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--biblia-claro); color: #1e3a8a; white-space: nowrap; }
+.chip.mencionado, .chip.aludido { background: var(--sin-dato-claro); color: #374151; }
+.aspectos { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+
+.juicio { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 9px 12px; border-radius: 10px; margin-top: 8px;
+          background: var(--congregacion-claro); color: #14532d; }
+.juicio.no { background: var(--abajo-claro); color: #78350f; }
+.juicio .marca-juicio { font-weight: 700; font-size: 15px; line-height: 1.35; }
+.juicio b { margin-right: 6px; }
+.juicio .ir { background: rgba(255, 255, 255, .7); }
+.juicio p { margin: 2px 0 0; color: var(--texto); font-size: 13.5px; }
+.senales { margin-top: 5px !important; color: var(--texto); font-size: 13.5px; }
+.senales li { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; }
+.senales .anuncia { color: var(--suave); }
+
+.partes-sermon > li, .pasos > li, .pasajes > li, .climax { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 0 8px; padding: 8px 8px 8px 6px; border-radius: 10px; }
+.partes-sermon > li.actual { background: var(--fondo); box-shadow: inset 3px 0 0 var(--texto); }
+.partes-sermon .cab { display: flex; gap: 4px 8px; align-items: baseline; flex-wrap: wrap; margin-bottom: 3px; }
+.partes-sermon .rol { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--suave); }
+.partes-sermon .sello { font-size: 11.5px; font-weight: 600; padding: 0 7px; border-radius: 999px; background: var(--congregacion-claro); color: #14532d; }
+.partes-sermon p { margin-bottom: 4px; }
+.transicion { color: var(--suave); font-size: 13.5px; }
+.transicion span { font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--tenue); margin-right: 4px; }
+.subpuntos { margin: 4px 0 !important; }
+.subpuntos li { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; }
+.pasos p, .pasajes p, .climax p { margin-bottom: 2px; }
+.pasos .para { color: var(--tenue); font-size: 13px; }
+.pasajes > li { padding-top: 5px; padding-bottom: 5px; }
+.climax { background: #fdf6e3; }
+
+/* Franja de capítulos sobre la cinta */
+.capitulos { position: relative; height: 20px; margin-bottom: 4px; flex: none; }
+.capitulos button { position: absolute; top: 0; height: 100%; padding: 0 5px; border: 0; border-radius: 4px; background: #e9e6e0; color: var(--suave);
+                    font-size: 11.5px; font-weight: 600; line-height: 20px; overflow: hidden; text-align: left; }
+.capitulos button span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.capitulos button.punto { background: #d9d5cd; color: var(--texto); }
+.capitulos button:hover, .capitulos button.actual { background: var(--texto); color: #fff; }
+.capitulos .estrella { position: absolute; top: -9px; margin-left: -6px; font-style: normal; font-size: 12px; line-height: 1; color: #b45309; cursor: pointer;
+                       text-shadow: 0 0 2px #fff, 0 0 2px #fff; }
+body.captura .capitulos { display: none; }
+
 footer { margin-top: 8px; color: var(--tenue); font-size: 12px; display: flex; justify-content: space-between; gap: 20px; }
 .advertencia { background: #fee2e2; color: #7f1d1d; border-radius: 10px; padding: 10px 14px; font-size: 14px; }
 
@@ -167,6 +242,8 @@ body.captura.resumen .cursor { display: none !important; }
   body.resumen .grafica.pitch { height: auto; }
   body.resumen .veredicto .cifra { font-size: clamp(48px, 9vh, 104px); }
   .lado { overflow: hidden; }
+  body.ver-sermon .sermon { flex: 1 1 0; min-height: 0; padding: 0; }
+  .sermon-cuerpo { flex: 1 1 0; min-height: 0; max-height: none; }
   .panel-ahora .grafica { min-height: 60px; }
   .transporte { flex-wrap: nowrap; gap: 6px; }
   .transporte button { white-space: nowrap; padding: 7px 12px; }

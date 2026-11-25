@@ -237,6 +237,165 @@ epEl.innerHTML = masLargos.length
   : `<span>Ningún episodio de 1 s o más.</span>`;
 epEl.addEventListener("click", ev => { const d = ev.target.closest("[data-t]"); if (d) irA(+d.dataset.t); });
 
+// ---------- Sermón: estructura y contenido (si se analizó con IA) ----------
+const E = DATOS.estructura;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const NOMBRE_PARTE = { introduccion: "Introducción", lectura: "Lectura del pasaje", punto: "Punto", conclusion: "Conclusión", oracion: "Oración", otro: "" };
+const CORTO_PARTE = { introduccion: "Intro", lectura: "Lectura", conclusion: "Conclusión", oracion: "Oración", otro: "" };
+const NOMBRE_PASAJE = { leido: "leído", citado: "citado", mencionado: "mencionado", aludido: "aludido" };
+const NAV_SERMON = { estructura: "Estructura", argumento: "Argumento", evangelio: "Evangelio", aplicaciones: "Aplicaciones", pasajes: "Pasajes" };
+const PARTES = E ? (E.partes || []) : [];
+const ir = (x, texto) => x == null || x.inicio == null ? "" :
+  `<button class="ir num" data-t="${x.inicio}" title="Ir a este momento">${esc(texto ?? x.minuto ?? hms(x.inicio))}</button>`;
+const cita = t => t ? `<blockquote>«${esc(t)}»</blockquote>` : "";
+const rolDe = p => p.tipo === "punto" ? `Punto ${p.numero ?? ""}`.trim() : (NOMBRE_PARTE[p.tipo] ?? "");
+
+// Qué parte del tiempo miró a la congregación entre a y b (segundos con rostro visible).
+function miradaEn(a, b) {
+  let c = 0, n = 0;
+  for (let i = Math.max(0, Math.floor(a)); i < Math.min(SEG.length, Math.ceil(b)); i++) {
+    if (SEG[i][1] === 0) { c++; n++; } else if (SEG[i][1] === 1) n++;
+  }
+  return n >= 20 ? 100 * c / n : null;
+}
+
+function juicio(si, textoSi, textoNo, detalle, momento, extra = "") {
+  return `<div class="juicio ${si ? "si" : "no"}"><span class="marca-juicio">${si ? "✓" : "✗"}</span>
+    <div><b>${si ? textoSi : textoNo}</b>${momento ? ` ${ir(momento)}` : ""}${detalle ? `<p>${esc(detalle)}</p>` : ""}${extra}</div></div>`;
+}
+
+function htmlSermon() {
+  const f = E.estructura || {}, arg = E.argumento || {}, cli = E.climax || {}, eva = E.evangelio || {};
+  const intro = E.introduccion;   // los análisis anteriores a esta pregunta no la traen
+  const apl = E.aplicaciones || [], pas = E.pasajes || [];
+  const partes = PARTES.map((p, i) => {
+    const m = miradaEn(p.inicio, p.fin ?? p.inicio);
+    const rol = rolDe(p), titulo = p.titulo && p.titulo !== rol ? p.titulo : "";
+    return `<li data-parte="${i}">
+      ${ir(p)}
+      <div>
+        <div class="cab">${rol ? `<span class="rol">${esc(rol)}</span>` : ""}${titulo ? `<b>${esc(titulo)}</b>` : ""}${p.anunciado ? `<span class="sello">anunciado</span>` : ""}</div>
+        ${p.resumen ? `<p>${esc(p.resumen)}</p>` : ""}
+        ${p.transicion ? `<p class="transicion"><span>Transición</span> «${esc(p.transicion)}»</p>` : ""}
+        ${(p.subpuntos || []).length ? `<ul class="subpuntos">${p.subpuntos.map(s => `<li>${ir(s)}<span>${esc(s.titulo)}</span></li>`).join("")}</ul>` : ""}
+        <p class="meta">${p.fin != null ? `${hms(p.fin - p.inicio)} de duración` : ""}${m != null ? ` · mirando a la congregación el ${num(m, 0)} %` : ""}</p>
+      </div></li>`;
+  }).join("");
+
+  // Dónde anunció o enumeró: cada señal con su minuto, y si es un punto del sermón o una lista dentro de uno.
+  const anuncios = (f.anuncios || []).map(a => `<li>${ir(a)}<span>${a.cita ? `«${esc(a.cita)}»` : ""}${
+    a.anuncia ? ` <span class="anuncia">→ ${esc(a.anuncia)}</span>` : ""}${
+    a.es_punto ? "" : ` <span class="chip aludido">lista dentro de un punto</span>`}</span></li>`).join("");
+
+  const aspectos = [...new Set((eva.menciones || []).map(m => m.aspecto).filter(Boolean))];
+  const secciones = [
+    ["estructura", "Estructura", `
+      ${E.tema ? `<p class="tema">${esc(E.tema)}</p>` : ""}
+      ${E.pasaje_principal ? `<p class="pasaje-principal">${esc(E.pasaje_principal)}</p>` : ""}
+      ${E.resumen ? `<p>${esc(E.resumen)}</p>` : ""}
+      ${juicio(f.clara, "Estructura clara", "Estructura poco clara", f.explicacion)}
+      ${juicio(f.anuncia_puntos, "Anunció sus puntos", "No anunció sus puntos", f.como_los_anuncia, null,
+          anuncios ? `<ul class="senales">${anuncios}</ul>` : "")}
+      ${!intro ? "" : juicio(intro.hay && intro.acorde, "La introducción va acorde con el argumento",
+          intro.hay ? "La introducción no va acorde con el argumento" : "No tiene introducción",
+          [intro.como_introduce, intro.explicacion].filter(Boolean).join(" "), intro.hay ? intro : null)}
+      <h4>Partes y transiciones</h4>
+      ${partes ? `<ol class="partes-sermon">${partes}</ol>` : `<p class="vacio">No se reconocieron partes.</p>`}`],
+    ["argumento", "Argumento y clímax", `
+      ${juicio(arg.hay, "Desarrolla un argumento", "No desarrolla un argumento", arg.tesis)}
+      ${(arg.desarrollo || []).length ? `<h4>Cómo se desarrolla</h4><ol class="pasos">${arg.desarrollo.map(x =>
+        `<li>${ir(x)}<p>${esc(x.paso)}</p></li>`).join("")}</ol>` : ""}
+      ${arg.valoracion ? `<p>${esc(arg.valoracion)}</p>` : ""}
+      <h4>Clímax</h4>
+      ${cli.hay ? `<div class="climax">${ir(cli)}<div><p>${esc(cli.descripcion)}</p>${cita(cli.cita)}</div></div>`
+                : `<p class="vacio">No hay un clímax reconocible.${cli.descripcion ? " " + esc(cli.descripcion) : ""}</p>`}`],
+    ["evangelio", "Evangelio", `
+      ${juicio(eva.presente, "Conecta el pasaje con el evangelio", "No conecta el pasaje con el evangelio", eva.resumen)}
+      ${aspectos.length ? `<p class="aspectos">${aspectos.map(a => `<span class="chip">${esc(a)}</span>`).join("")}</p>` : ""}
+      ${(eva.menciones || []).length ? `<ol class="pasos">${eva.menciones.map(m =>
+        `<li>${ir(m)}<div><p><span class="chip">${esc(m.aspecto)}</span> ${esc(m.como)}</p>${cita(m.cita)}</div></li>`).join("")}</ol>` : ""}`],
+    ["aplicaciones", `Aplicaciones${apl.length ? ` <small>${apl.length}</small>` : ""}`,
+      apl.length ? `<ol class="pasos">${apl.map(a =>
+        `<li>${ir(a)}<div><p>${esc(a.aplicacion)}${a.dirigida_a ? ` <span class="para">· ${esc(a.dirigida_a)}</span>` : ""}</p>
+          ${a.se_apoya_en ? `<p class="meta">Se apoya en: ${esc(a.se_apoya_en)}</p>` : ""}${cita(a.cita)}</div></li>`).join("")}</ol>`
+      : `<p class="vacio">No se encontraron aplicaciones concretas a los oyentes.</p>`],
+    ["pasajes", `Pasajes citados${pas.length ? ` <small>${pas.length}</small>` : ""}`,
+      pas.length ? `<ol class="pasajes">${pas.map(p =>
+        `<li>${ir(p)}<div><b>${esc(p.referencia)}</b> <span class="chip ${esc(p.tipo)}">${esc(NOMBRE_PASAJE[p.tipo] || p.tipo)}</span>
+          ${p.nota ? `<p class="meta">${esc(p.nota)}</p>` : ""}</div></li>`).join("")}</ol>`
+      : `<p class="vacio">No se encontraron pasajes citados.</p>`],
+  ];
+  document.getElementById("sermon-nav").innerHTML =
+    secciones.map(([id]) => `<button data-seccion="${id}">${NAV_SERMON[id]}</button>`).join("") +
+    `<span class="espacio"></span><button class="discreto" id="copiar-sermon" title="Copiar el análisis como texto">Copiar</button>`;
+  document.getElementById("sermon-cuerpo").innerHTML =
+    secciones.map(([id, t, h]) => `<section id="s-${id}"><h3>${t}</h3>${h}</section>`).join("") +
+    `<p class="meta pie-sermon">Análisis hecho por un modelo de lenguaje (${esc(E.modelo || "IA")}) sobre la transcripción automática. Úsalo como punto de partida: revisa cada momento en el video.</p>`;
+}
+
+function verPestana(nombre) {
+  const sermon = nombre === "sermon" && !!E;
+  document.body.classList.toggle("ver-sermon", sermon);
+  if (sermon && document.body.classList.contains("resumen")) document.getElementById("ver-resumen").click();
+  for (const b of document.querySelectorAll("[data-pestana]")) b.classList.toggle("activa", (b.dataset.pestana === "sermon") === sermon);
+  parteActual = -2;
+  setTimeout(redibujar, 0);
+}
+
+// Franja de capítulos sobre la cinta: una casilla por parte del sermón, alineada con el tiempo.
+function dibujarCapitulos() {
+  const el = document.getElementById("capitulos");
+  if (!E || !PARTES.length) { el.hidden = true; return; }
+  const { izq, ancho } = areaX();
+  const px = t => izq + Math.max(0, Math.min(1, t / DUR)) * ancho;
+  const cli = E.climax || {};
+  el.hidden = false;
+  el.innerHTML = PARTES.map((p, i) => {
+    const x0 = px(p.inicio), x1 = px(p.fin ?? DUR);
+    const corto = p.tipo === "punto" ? `${p.numero ?? ""}` : (CORTO_PARTE[p.tipo] ?? "");
+    const largo = [rolDe(p), p.titulo !== rolDe(p) ? p.titulo : ""].filter(Boolean).join(": ");
+    return `<button class="${p.tipo}${i === parteActual ? " actual" : ""}" data-t="${p.inicio}" data-parte="${i}" style="left:${x0}px;width:${Math.max(2, x1 - x0 - 1)}px"
+      title="${esc(`${p.minuto ?? hms(p.inicio)} · ${largo}`)}"><span>${esc(x1 - x0 > 120 && p.titulo && p.tipo === "punto" ? `${corto} · ${p.titulo}` : corto)}</span></button>`;
+  }).join("") + (cli.hay && cli.inicio != null
+    ? `<i class="estrella" data-t="${cli.inicio}" style="left:${px(cli.inicio)}px" title="Clímax · ${esc(cli.minuto ?? hms(cli.inicio))}">★</i>` : "");
+}
+
+let parteActual = -2;
+function marcarParte(t) {
+  if (!E) return;
+  let i = -1;
+  for (let k = 0; k < PARTES.length; k++) if (t >= PARTES[k].inicio - 0.05) i = k;
+  if (i === parteActual) return;
+  parteActual = i;
+  for (const el of document.querySelectorAll("[data-parte]")) el.classList.toggle("actual", +el.dataset.parte === i);
+}
+
+if (E) {
+  htmlSermon();
+  document.getElementById("pestanas").hidden = false;
+  document.getElementById("pestanas").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-pestana]"); if (b) verPestana(b.dataset.pestana);
+  });
+  // Un clic en un minuto lleva el video a ese momento y lo reproduce.
+  const saltar = ev => {
+    const b = ev.target.closest("[data-t]"); if (!b) return;
+    irA(+b.dataset.t);
+    if (!CAPTURA) video.play().catch(() => {});
+  };
+  document.getElementById("sermon-cuerpo").addEventListener("click", saltar);
+  document.getElementById("capitulos").addEventListener("click", saltar);
+  document.getElementById("sermon-nav").addEventListener("click", async ev => {
+    const s = ev.target.closest("[data-seccion]");
+    if (s) document.getElementById(`s-${s.dataset.seccion}`).scrollIntoView({ behavior: "smooth", block: "start" });
+    const c = ev.target.closest("#copiar-sermon");
+    if (c) {
+      try { await navigator.clipboard.writeText(DATOS.estructura_texto || ""); c.textContent = "Copiado"; }
+      catch { c.textContent = "No se pudo copiar"; }
+      setTimeout(() => { c.textContent = "Copiar"; }, 2000);
+    }
+  });
+}
+
 // ---------- Sincronía ----------
 const caja = document.getElementById("caja"), etiqueta = document.getElementById("caja-etiqueta");
 const escenario = document.getElementById("escenario");
@@ -291,7 +450,8 @@ function pintar() {
   cc.style.display = "block";
   cc.style.left = `${izq + t / DUR * ancho - 1}px`;
   cc.style.height = `${cinta.clientHeight}px`;
-  if (!document.body.classList.contains("resumen")) actualizarZoom(t);
+  if (!document.body.classList.contains("resumen") && !document.body.classList.contains("ver-sermon")) actualizarZoom(t);
+  marcarParte(t);
 }
 function colocarCursor(id, chart, t) {
   const el = document.getElementById(id), a = chart.chartArea;
@@ -344,19 +504,21 @@ function ajustarVideo() {
   escenario.style.width = `${w}px`;
   escenario.style.height = `${w / prop}px`;
 }
-function redibujar() { ajustarVideo(); gPitch.resize(); gZoom.resize(); dibujarCinta(); pintar(); }
+function redibujar() { ajustarVideo(); gPitch.resize(); gZoom.resize(); dibujarCinta(); dibujarCapitulos(); pintar(); }
 document.getElementById("ver-resumen").onclick = () => {
+  if (!document.body.classList.contains("resumen") && document.body.classList.contains("ver-sermon")) verPestana("mirada");
   document.body.classList.toggle("resumen");
   document.getElementById("ver-resumen").textContent =
     document.body.classList.contains("resumen") ? "Volver al video" : "Resumen";
   setTimeout(redibujar, 0);
 };
 document.addEventListener("keydown", ev => {
-  if (ev.target.tagName === "INPUT") return;
+  if (ev.target.tagName === "INPUT" || ev.metaKey || ev.ctrlKey || ev.altKey) return;
   if (ev.code === "Space") { ev.preventDefault(); btnPlay.click(); }
   if (ev.code === "ArrowLeft") irA(ahora() - 5);
   if (ev.code === "ArrowRight") irA(ahora() + 5);
   if (ev.key === "r") document.getElementById("ver-resumen").click();
+  if (ev.key === "s" && E) verPestana(document.body.classList.contains("ver-sermon") ? "mirada" : "sermon");
 });
 
 // Capturar: con `mirame ver` lo hace el servidor (Playwright); abierto como archivo, copia el comando.
@@ -386,6 +548,8 @@ if (location.pathname.startsWith("/analisis/")) document.getElementById("volver"
 window.addEventListener("resize", () => requestAnimationFrame(redibujar));
 ajustarVideo();
 dibujarCinta();
+dibujarCapitulos();
+if (params.get("vista") === "sermon") verPestana("sermon");
 
 if (CAPTURA) {
   document.body.classList.add("captura");

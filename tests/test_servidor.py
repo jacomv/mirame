@@ -47,6 +47,14 @@ def test_validaciones_al_analizar(base):
     assert codigo == 400 and "después" in json.loads(cuerpo)["error"]
 
 
+def test_estructura_pide_clave(base):
+    (rutas.analisis() / "2026-01-01_x").mkdir()
+    codigo, cuerpo, _ = pedir(base + "/api/analisis/2026-01-01_x/estructura", "POST")
+    assert codigo == 400 and "clave" in json.loads(cuerpo)["error"]
+    codigo, _, _ = pedir(base + "/api/analisis/no-existe/estructura", "POST")
+    assert codigo == 404
+
+
 def test_rechaza_otros_origenes(base):
     codigo, _, _ = pedir(base + "/api/ajustes", "POST", {"groq_clave": "x"},
                          {"Origin": "https://sitio-malicioso.example"})

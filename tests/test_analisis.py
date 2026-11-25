@@ -92,6 +92,20 @@ def test_advertencia_poco_confiable(pct_sin, confiable):
     assert r["poco_confiable"] is (not confiable)
 
 
+def test_avisa_si_demasiado_sermon_quedo_marcado_como_oracion(tmp_path):
+    import json
+
+    df = fotogramas([0] * 400)                                   # 100 s
+    video = {"titulo": "x", "duracion_analizada": 100.0}
+    (tmp_path / "lecturas.json").write_text(json.dumps({"lecturas": [], "oraciones": [{"inicio": 0, "fin": 10}]}))
+    r = analisis.guardar(tmp_path, df, Parametros(), video)
+    assert r["oracion"]["segundos"] == 10 and r["segundos_excluidos"] == 10 and r["advertencias"] == []
+    (tmp_path / "lecturas.json").write_text(json.dumps({"lecturas": [], "oraciones": [
+        {"inicio": 0, "fin": 10}, {"inicio": 40, "fin": 60}]}))
+    r = analisis.guardar(tmp_path, analisis.leer_fotogramas(tmp_path), Parametros(), video)
+    assert len(r["advertencias"]) == 1 and "marcados como oración (en 0:00, 0:40)" in r["advertencias"][0]
+
+
 def test_guardar_y_recalcular_dan_lo_mismo(tmp_path):
     df = fotogramas([0] * 20 + [30] * 8 + [0] * 12)
     r1 = analisis.guardar(tmp_path, df, Parametros(), {"titulo": "x"})

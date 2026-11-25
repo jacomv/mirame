@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from . import analisis, config, lecturas, reporte, rutas, video
+from . import analisis, config, estructura, lecturas, reporte, rutas, video
 from .progreso import Cancelado, Cronometro, Progreso
 from .video import formato_tiempo
 
@@ -34,6 +34,7 @@ class Opciones:
     ancho_minimo: int = 0
     umbral_ojos: float | None = 0.45              # None = solo la cabeza
     separar_lecturas: bool | None = None          # None = sí, si hay claves configuradas
+    estructura: bool | None = None                # analizar estructura y contenido; None = sí, si hay claves
     salida: Path | None = None                    # carpeta del análisis; por defecto una nueva
 
     def parametros(self) -> analisis.Parametros:
@@ -58,11 +59,14 @@ def rendimiento() -> float:
     return float(sorted(valores)[len(valores) // 2]) if valores else RENDIMIENTO_POR_DEFECTO
 
 
-def estimar(segundos_video: float, fps: float = 4.0, lecturas: bool = False, descargar: bool = False) -> dict:
+def estimar(segundos_video: float, fps: float = 4.0, lecturas: bool = False, descargar: bool = False,
+            estructura: bool = False) -> dict:
     """Cuánto tardará un análisis, para avisar antes de empezar."""
     medir = segundos_video * rendimiento() * fps / 4
     recortar = segundos_video * 0.02
     extra = (60 + segundos_video * 0.03) if lecturas else 0     # transcripción + marcas
+    if estructura:                                              # las consultas de la estructura (y transcribir, si no se hizo)
+        extra += 60 + segundos_video * 0.02 + (0 if lecturas else segundos_video * 0.03)
     bajar = segundos_video * 0.03 if descargar else 0
     return {"segundos": round(medir + recortar + extra + bajar), "medicion": round(medir)}
 
@@ -84,6 +88,14 @@ def advertencias(duracion_total: float | None, inicio: float | None, fin: float 
     return avisos
 
 
+def _pasos_de_ia(op: Opciones) -> tuple[bool, bool]:
+    """(separar lecturas, analizar estructura): lo pedido, o lo que permitan las claves."""
+    cfg = config.cargar()
+    separar = cfg.puede_separar_lecturas if op.separar_lecturas is None else op.separar_lecturas
+    con_estructura = cfg.puede_analizar_estructura if op.estructura is None else op.estructura
+    return bool(separar), bool(con_estructura)
+
+
 def carpeta_nueva(id_video: str) -> Path:
     """analisis/<fecha>_<id>, con sufijo si ya existe."""
     base = f"{date.today().isoformat()}_{re.sub(r'[^A-Za-z0-9_-]+', '-', id_video)[:60]}"
@@ -96,13 +108,13 @@ def carpeta_nueva(id_video: str) -> Path:
 
 def analizar(op: Opciones, progreso: Progreso | None = None) -> tuple[Path, dict]:
     """Descarga, recorta, mide la mirada fotograma a fotograma y genera el reporte.
-    Si hay claves de IA, además separa la lectura bíblica y la oración."""
+    Si hay claves de IA, además separa la lectura bíblica y la oración, y analiza la
+    estructura del sermón."""
     progreso = progreso or Progreso()
-    separar = op.separar_lecturas
-    if separar is None:
-        separar = config.cargar().puede_separar_lecturas
+    separar, con_estructura = _pasos_de_ia(op)
     progreso.plan = ["Obteniendo el video", "Recortando el sermón", "Midiendo la mirada"] + (
-        ["Transcribiendo el audio", "Marcando lectura bíblica y oración"] if separar else [])
+        ["Transcribiendo el audio", "Marcando lectura bíblica y oración"] if separar else []) + (
+        ([] if separar else ["Transcribiendo el audio"]) + ["Analizando la estructura del sermón"] if con_estructura else [])
 
     progreso.etapa_nueva("Obteniendo el video")
     fuente = video.obtener(op.origen, progreso)
@@ -149,15 +161,22 @@ def _analizar(op: Opciones, fuente: video.Fuente, carpeta: Path, progreso: Progr
     reporte.generar(carpeta)
     _estado(carpeta, "listo")
 
-    if op.separar_lecturas is None and not config.cargar().puede_separar_lecturas:
-        return carpeta, resumen
-    if op.separar_lecturas is not False:
+    separar, con_estructura = _pasos_de_ia(op)
+    if separar:
         try:
             resumen = separar_lecturas(carpeta, progreso)
         except lecturas.FaltaLlave as e:
             progreso.aviso(f"No se separó la lectura bíblica: {e}")
         except Exception as e:  # noqa: BLE001 — el análisis de la mirada ya quedó guardado
             progreso.aviso(f"No se separó la lectura bíblica: {e}")
+
+    if con_estructura:
+        try:
+            analizar_estructura(carpeta, progreso)
+        except Cancelado:
+            raise
+        except Exception as e:  # noqa: BLE001 — el análisis de la mirada ya quedó guardado
+            progreso.aviso(f"No se analizó la estructura del sermón: {e}")
     return carpeta, resumen
 
 
@@ -208,6 +227,19 @@ def separar_lecturas(carpeta: Path, progreso: Progreso | None = None, retranscri
         progreso.etapa_nueva("Marcando lectura bíblica y oración")
         lecturas.marcar_lecturas(carpeta, progreso)
     return recalcular(carpeta)
+
+
+def analizar_estructura(carpeta: Path, progreso: Progreso | None = None, retranscribir: bool = False) -> dict:
+    """Transcribe (si hace falta), analiza la estructura y el contenido del sermón, y
+    regenera el reporte. No cambia las cifras de la mirada."""
+    progreso = progreso or Progreso()
+    if retranscribir or not (carpeta / "transcripcion.json").exists():
+        progreso.etapa_nueva("Transcribiendo el audio")
+        lecturas.transcribir(carpeta, progreso)
+    progreso.etapa_nueva("Analizando la estructura del sermón")
+    datos = estructura.analizar(carpeta, progreso)
+    reporte.generar(carpeta)
+    return datos
 
 
 def recalcular(carpeta: Path, cambios: dict | None = None) -> dict:
